@@ -7,6 +7,7 @@
 Run:  blender -b -P tools/check_consistency.py
 """
 import bpy
+import json
 import math
 import os
 import re
@@ -19,10 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BRICKS = str(ROOT / "bricks" / "bricks.blend")
 TOYS = [("warship", str(ROOT / "examples" / "warship"), "warship_print.3mf"),
         ("cottage", str(ROOT / "examples" / "cottage"), "cottage_print.3mf")]
-UNITS = ["brick_1x1", "brick_1x2", "brick_2x2", "brick_2x4", "brick_2x6",
-         "slope_2x2_45", "round_brick_1x1", "plate_1x2", "plate_2x2",
-         "plate_2x4", "plate_2x6", "plate_4x8", "plate_8x8", "plate_6x12",
-         "tile_2x2"]
+UNITS = list(json.loads((ROOT / "bricks" / "bricks.json").read_text())["units"].keys())
 NS = {"m": "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}
 
 

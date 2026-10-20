@@ -5,10 +5,10 @@ plus example models and print-ready Bambu Studio projects.
 
 ![brick set](docs/images/bricks.png)
 
-- **15 brick types** on a true 8 mm stud pitch (bricks, slopes, rounds, plates, tiles)
+- **27 brick types** on a true 8 mm stud pitch (bricks, slopes, rounds, plates, tiles)
 - **Print-ready 3MF** — one Bambu Studio project per brick, with the user's printer,
   process and filament settings baked in
-- **Clutch tuning from real prints** — press-fit 1x1 / 1x2, clearance-fit rounds,
+- **Clutch tuning from real prints** — press-fit 1x1 / 1x2 / 1x4, clearance-fit rounds,
   slopes and tiles
 - **Example builds** with layer-by-layer instructions and per-colour print plates
 - **Agent skills** that document the Blender → Bambu 3MF pipeline and the brick spec
@@ -36,7 +36,7 @@ Assembly instructions are rendered as one image per layer — see
 # 0. edit paths in the commands below if your blender binary differs
 BLENDER=blender
 
-# 1. build the 15 bricks (writes bricks/bricks.blend + overview renders)
+# 1. build the 27 bricks (writes bricks/bricks.blend + overview renders)
 $BLENDER -b --factory-startup -P bricks/build_bricks.py
 
 # 2. mechanical checks (clearance, press-fit, cavity sizes)
@@ -61,21 +61,33 @@ Generated files land next to their source: `bricks/exports/*.3mf` (committed),
 
 | Type | Footprint (mm) | Clutch |
 |---|---|---|
-| `brick_1x1` | 7.8 × 7.8 | 4.40 cavity (press-fit) |
+| `brick_1x1` | 7.8 × 7.8 | 4.40 cavity (press-fit, no tubes) |
 | `brick_1x2` | 7.8 × 15.8 | 4.45 cavity (press-fit, no tubes) |
+| `brick_1x4` | 7.8 × 31.8 | 4.45 cavity (press-fit, no tubes) |
 | `brick_2x2` | 15.8 × 15.8 | 4.80 clutch tubes |
 | `brick_2x4` | 15.8 × 31.8 | 4.80 clutch tubes |
 | `brick_2x6` | 15.8 × 47.8 | 4.80 clutch tubes |
-| `slope_2x2_45` | 15.8 × 15.75 | 4.60 tube bore (kid-friendly clearance) |
-| `round_brick_1x1` | 7.8 × 7.8 | 4.65 bore (nominal line-to-line) |
+| `slope_1x1_30` | 7.8 × 7.8 | 4.80 cavity (no top studs) |
+| `slope_1x2_30` | 7.8 × 15.8 | 4.80 cavity (no top studs) |
+| `slope_2x2_45` | 15.8 × 15.8 | 4.60 clutch tubes |
+| `round_brick_1x1` | 7.8 × 7.8 | 4.65 bore |
+| `round_brick_2x2` | 15.8 × 15.8 | 4.80 clutch tubes |
+| `round_plate_1x1` | 7.8 × 7.8 | 4.80 bore |
+| `plate_1x1` | 7.8 × 7.8 | 4.80 cavity (no tubes) |
 | `plate_1x2` | 7.8 × 15.8 | 4.80 cavity (no tubes) |
+| `plate_1x4` | 7.8 × 31.8 | 4.80 cavity (no tubes) |
 | `plate_2x2` | 15.8 × 15.8 | 4.80 clutch tubes |
 | `plate_2x4` | 15.8 × 31.8 | 4.80 clutch tubes |
 | `plate_2x6` | 15.8 × 47.8 | 4.80 clutch tubes |
+| `plate_4x4` | 31.8 × 31.8 | 4.80 clutch tubes |
 | `plate_4x8` | 31.8 × 63.8 | 4.80 clutch tubes |
 | `plate_8x8` | 63.8 × 63.8 | 4.80 clutch tubes |
 | `plate_6x12` | 47.8 × 95.8 | 4.80 clutch tubes |
+| `tile_1x1` | 7.8 × 7.8 | 1 pocket, 4.60 × 1.9 deep |
+| `tile_1x2` | 7.8 × 15.8 | 2 pockets, 4.60 × 1.9 deep |
 | `tile_2x2` | 15.8 × 15.8 | 4 pockets, 4.60 × 1.9 deep |
+| `tile_2x4` | 15.8 × 31.8 | 8 pockets, 4.60 × 1.9 deep |
+| `jumper_1x2` | 7.8 × 15.8 | 4.80 cavity (one centred stud) |
 
 Full machine-readable specs: [`bricks/bricks.json`](bricks/bricks.json).
 Nominal stud OD is **4.5 mm** (4.8 socket minus 0.3 print clearance); heights are
@@ -86,10 +98,11 @@ Nominal stud OD is **4.5 mm** (4.8 socket minus 0.3 print clearance); heights ar
 - 0.20 mm layer, PLA, textured PEI. All parts are single-piece, no supports.
 - One plate per colour (single-extruder friendly). Plates are separated by ≥ 6 mm
   and kept 12 mm from the bed edge.
-- `brick_1x1` / `brick_1x2` are press-fit; `round_brick_1x1`, `slope_2x2_45` and
-  `tile_2x2` use nominal-zero / small-clearance fits that rely on FDM hole
-  shrink for grip. If your holes print oversized, tighten the cavity by ~0.05 mm
-  (see `bricks.json` and the skill's tuning notes).
+- `brick_1x1` / `brick_1x2` / `brick_1x4` are press-fit; round parts, slopes and
+  tiles use nominal-zero / small-clearance fits that rely on FDM hole shrink for
+  grip. Plates, the jumper and the cheese slopes use the standard 4.80 cavity.
+  If your holes print oversized, tighten the cavity by ~0.05 mm (see
+  `bricks.json` and the skill's tuning notes).
 
 ### Using a different printer
 
@@ -105,7 +118,7 @@ BED_SIZE=220 BAMBU_TEMPLATE=/path/to/template \
 ## Repository layout
 
 ```
-bricks/           generator, specs (bricks.json), template, 15 print-ready 3MFs
+bricks/           generator, specs (bricks.json), template, 27 print-ready 3MFs
 examples/warship  destroyer: design, BOM, print plan, instructions
 examples/cottage  cottage:   design, BOM, print plan
 tools/            spec + cross-project consistency checks

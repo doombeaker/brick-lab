@@ -76,6 +76,10 @@ tests = [
     ("slope_2x2  onto brick_2x4", place("slope_2x2_45", 0, -4, BH), base),
     ("round_1x1  onto brick_2x4", place("round_brick_1x1", 4, -12, BH), base),
     ("plate_1x2  onto brick_2x4", place("plate_1x2", -4, -8, BH), base),
+    ("plate_1x1  onto brick_2x4", place("plate_1x1", -4, -12, BH), base),
+    ("tile_1x2   onto brick_2x4", place("tile_1x2", -4, -8, BH), base),
+    ("jumper_1x2 onto brick_2x4", place("jumper_1x2", -4, -8, BH), base),
+    ("cheese_1x1 onto brick_2x4", place("slope_1x1_30", -4, -12, BH), base),
 ]
 PRESS_FIT = {"brick_1x1  onto plate_2x4", "brick_1x1 onto brick_1x1"}
 
