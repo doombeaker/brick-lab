@@ -90,4 +90,4 @@
 **原因**：FDM 小圆孔会缩 0.05~0.15 mm，方腔收缩较小；不同材料/温度也有差异。
 
 **修复**：以实打反馈为准，按 0.05 mm 步进调整；圆孔比方腔多留 0.05~0.1 mm。
-详见 `blender-bricks-kit` 的 `references/clutch-tuning.md`。
+详见另一个 skill：`blender-bricks-kit/references/clutch-tuning.md`。
