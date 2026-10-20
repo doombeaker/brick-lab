@@ -81,8 +81,15 @@ tests = [
     ("jumper_1x2 onto brick_2x4", place("jumper_1x2", -4, -8, BH), base),
     ("cheese_1x1 onto brick_2x4", place("slope_1x1_30", -4, -12, BH), base),
     ("round_2x2  onto brick_2x4", place("round_brick_2x2", 0, -4, BH), base),
+    ("ridge_2x2  onto brick_2x4", place("slope_2x2_double_45", 0, -8, BH), base),
+    # +0.05: Blender's EXACT solver returns garbage when two large faces are
+    # exactly coplanar (the arch's flat underside on the plate's top face)
+    ("arch_1x4   onto plate_2x4", place("arch_1x4", -4, 0, BH + PH + 0.05), plate_b),
+    ("window     onto brick_2x4", place("window_frame_1x2x2", -4, -8, BH), base),
+    ("roundplate onto brick_2x4", place("round_plate_2x2", 0, -8, BH), base),
 ]
-PRESS_FIT = {"brick_1x1  onto plate_2x4", "brick_1x1 onto brick_1x1"}
+PRESS_FIT = {"brick_1x1  onto plate_2x4", "brick_1x1 onto brick_1x1",
+             "arch_1x4   onto plate_2x4"}   # arch legs use the 1xN 4.45 press cavity
 
 all_ok = True
 for label, top, bottom in tests:
@@ -105,6 +112,22 @@ bpy.context.view_layer.update()
 v, _ = interference(bad, base)
 print(f"{'sanity: forced 2mm overlap':30s} interference = {v:9.1f} mm^3   "
       f"{'DETECTOR OK' if v > 100 else '!! detector broken'}")
+
+# ridge seating sweep: the ridge has no stud-relief holes (unlike slope_2x2_45,
+# whose wedge-shaped cavity blocks the front studs). Prove the flat underside +
+# blind pockets clear a stud at every grid position instead.
+print("--- ridge seating sweep (no relief holes) ---")
+plate48 = place("plate_4x8", 0, -200, 0)
+bpy.context.view_layer.update()
+for dx, dy in ((0, 0), (8, 0), (0, 8), (8, 8), (-8, 8)):
+    r = place("slope_2x2_double_45", dx, -200 + dy, PH + 0.05)
+    bpy.context.view_layer.update()
+    v, _ = interference(r, plate48)
+    ok = v < 0.001
+    all_ok &= ok
+    print(f"ridge at ({dx:+d},{dy:+d}) on plate 4x8   interference = {v:9.4f} mm^3   "
+          f"{'OK' if ok else '!! STUD BLOCKED'}")
+    bpy.data.objects.remove(r, do_unlink=True)
 
 # side-by-side neighbours
 a = place("brick_1x1", 0, 0, 0)

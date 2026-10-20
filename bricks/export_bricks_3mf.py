@@ -23,8 +23,9 @@ BED = float(os.environ.get("BED_SIZE", "256"))
 os.makedirs(OUT, exist_ok=True)
 
 UNITS = ["brick_1x1", "brick_1x2", "brick_1x4", "brick_2x2", "brick_2x4", "brick_2x6",
-         "slope_1x1_30", "slope_1x2_30", "slope_2x2_45",
-         "round_brick_1x1", "round_brick_2x2", "round_plate_1x1",
+         "slope_1x1_30", "slope_1x2_30", "slope_2x2_45", "slope_2x2_double_45",
+         "arch_1x4", "window_frame_1x2x2", "window_pane_1x2",
+         "round_brick_1x1", "round_brick_2x2", "round_plate_1x1", "round_plate_2x2",
          "plate_1x1", "plate_1x2", "plate_1x4", "plate_2x2", "plate_2x4", "plate_2x6",
          "plate_4x4", "plate_4x8", "plate_8x8", "plate_6x12",
          "tile_1x1", "tile_1x2", "tile_2x2", "tile_2x4", "jumper_1x2"]

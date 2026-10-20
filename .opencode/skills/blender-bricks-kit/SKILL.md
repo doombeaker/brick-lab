@@ -1,11 +1,11 @@
 ---
 name: blender-bricks-kit
-description: brick-lab（原 blender-bricks）积木套件的规格与建模流程：27 种砖的尺寸、腔径/过盈、网格与分层放置、基于现有砖创建新模型（战舰、小屋这类项目）。当用户要查砖型尺寸、调整配合松紧、复用积木做新模型或核对规格一致性时使用。
+description: brick-lab（原 blender-bricks）积木套件的规格与建模流程：32 种砖的尺寸、腔径/过盈、网格与分层放置、基于现有砖创建新模型（战舰、小屋这类项目）。当用户要查砖型尺寸、调整配合松紧、复用积木做新模型或核对规格一致性时使用。
 ---
 
 # brick-lab 积木套件
 
-一套 8 mm 间距、FDM 可打印的 LEGO 兼容积木：27 种类型，全部由
+一套 8 mm 间距、FDM 可打印的 LEGO 兼容积木：32 种类型，全部由
 `bricks/build_bricks.py` 参数化生成，示例项目见 `examples/warship` 与
 `examples/cottage`。
 
@@ -38,11 +38,12 @@ blender -b --factory-startup -P bricks/export_bricks_3mf.py
 | 砖高 / 板高 | 9.6 / 3.2 mm | 一层砖 = 3 个 3.2 层 |
 | 砖壁厚 | 1.5 mm | 板自动减到 1.3，保证凸点能进入 |
 
-## 27 种砖（速查）
+## 32 种砖（速查）
 
 砖：`brick_1x1`、`brick_1x2`、`brick_1x4`、`brick_2x2`、`brick_2x4`、`brick_2x6`
-斜面：`slope_1x1_30`、`slope_1x2_30`（30° 奶酪/长斜面，无顶凸点）、`slope_2x2_45`
-圆柱：`round_brick_1x1`、`round_brick_2x2`（4 离合管）、`round_plate_1x1`
+斜面：`slope_1x1_30`、`slope_1x2_30`（30° 奶酪/长斜面，无顶凸点）、`slope_2x2_45`、`slope_2x2_double_45`（双坡屋脊，无顶凸点，脊高 9.6）
+圆柱：`round_brick_1x1`、`round_brick_2x2`（实心+4 盲腔）、`round_plate_1x1`、`round_plate_2x2`（实心+4 盲腔）
+建筑件：`arch_1x4`（16 mm 半圆拱洞）、`window_frame_1x2x2`（12.8 × 15.3 洞，2 钉高）、`window_pane_1x2`（凸台+翻边插入件，从背面装入，不是堆叠件）
 板：`plate_1x1`、`plate_1x2`、`plate_1x4`、`plate_2x2`、`plate_2x4`、`plate_2x6`、`plate_4x4`、`plate_4x8`、`plate_8x8`、`plate_6x12`
 光面：`tile_1x1`、`tile_1x2`、`tile_2x2`、`tile_2x4`
 跳板：`jumper_1x2`（1x2 板，正中一个凸点）
@@ -59,7 +60,8 @@ blender -b --factory-startup -P bricks/export_bricks_3mf.py
 | 标准 2xN 砖、所有带管板 | 管孔 4.80 | 标准间隙 0.15/边 |
 | 斜面 2x2 45° | 管孔 4.60 | 间隙 0.05/边（小孩可手推） |
 | 细节板 1x1/1x4/4x4、跳板、奶酪斜面、圆板 | 腔/孔 4.80 | 标准间隙 0.15/边 |
-| tile 1x1/1x2/2x2/2x4、圆 2x2 砖 | 盲腔 4.60 × 1.9 深 | 间隙 0.05/边（浅腔比管类更轻） |
+| tile 1x1/1x2/2x2/2x4、圆 2x2 砖/板、屋脊、窗框 | 盲腔 4.60 × 1.9 深 | 间隙 0.05/边（浅腔比管类更轻） |
+| 拱 1x4 | 2 个盲腔（只在两端钉下） | 中间两钉悬空，不承力 |
 
 调整历史与判断方法见 `references/clutch-tuning.md`。
 
@@ -109,6 +111,6 @@ k.place(unit, gx, gy, zl, color, rot=0)
 
 ## 参考
 
-- `references/brick-specs.md` — 27 种砖完整参数表
+- `references/brick-specs.md` — 32 种砖完整参数表
 - `references/clutch-tuning.md` — 配合调整历史、FDM 收缩经验
 - `references/project-scaffold.md` — 脚手架文件、层级数学、校验流程

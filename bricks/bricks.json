@@ -83,6 +83,59 @@
       },
       "note": "45deg slope; front-row stud relief columns; back-row clutch tubes are clearance fit for easy insertion"
     },
+    "slope_2x2_double_45": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 9.6,
+      "total_height_mm": 9.6,
+      "studs": 0,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "double convex roof ridge: ridge line along Y at the brick top, 45deg faces down to a 1.7mm skirt at both eaves; solid body + 4 blind pockets (clutch tubes would breach the sloped walls)"
+    },
+    "arch_1x4": {
+      "nx": 1,
+      "ny": 4,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 4,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.45
+      },
+      "note": "1x4 arch: 16mm semicircular opening (2 studs) through the 7.8mm thickness, crown 1.6mm below the top; legs carry the same 4.45 x 8.1 press-fit cavities as brick_1x4 (middle studs hang over the opening and have no clutch)"
+    },
+    "window_frame_1x2x2": {
+      "nx": 1,
+      "ny": 2,
+      "body_height_mm": 19.2,
+      "total_height_mm": 21.0,
+      "studs": 2,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "1x2x2 window frame, 1.5mm border (= WALL): opening 12.8 x 15.3 through 7.8mm, sill 2.4 so the 1.9mm-deep blind pockets stay 0.5mm below it; no recess - window_pane_1x2 rests on the back face and is captured by the 1.5mm border"
+    },
+    "window_pane_1x2": {
+      "nx": 1,
+      "ny": 2,
+      "dims_mm": [
+        2.0,
+        14.6,
+        17.1
+      ],
+      "body_height_mm": 17.1,
+      "total_height_mm": 17.1,
+      "studs": 0,
+      "clutch": {
+        "kind": "none",
+        "size_mm": 0.0
+      },
+      "note": "insert, not a stacking part: 0.8mm boss plugs the 12.8 x 15.3 opening (0.1 clearance per side), 1.2mm flange 14.6 x 17.1 rests on the frame's back face; print flange-down"
+    },
     "round_brick_1x1": {
       "nx": 1,
       "ny": 1,
@@ -250,6 +303,18 @@
         "size_mm": 4.8
       },
       "note": "round plate, standard cavity"
+    },
+    "round_plate_2x2": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 4,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "round 2x2 plate: solid disc, 4 blind pockets (tube bores breach the round wall)"
     },
     "plate_1x1": {
       "nx": 1,

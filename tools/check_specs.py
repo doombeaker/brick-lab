@@ -45,7 +45,14 @@ for name, spec in SPEC["units"].items():
     # slope loses 0.05 mm in Y because of its raked plane
     tol_y = 0.06 if name.startswith("slope") else 0.02
     tol_z = 0.06 if name.endswith("_30") else 0.02
-    dims_ok = abs(dx - exp_dx) < 0.02 and abs(dy - exp_dy) < tol_y and abs(dz - spec["total_height_mm"]) < tol_z
+    if "dims_mm" in spec:
+        # inserts (window pane) are not on the stud grid: compare to explicit dims
+        exp_dx, exp_dy, exp_dz = spec["dims_mm"]
+        dims_ok = (abs(dx - exp_dx) < 0.02 and abs(dy - exp_dy) < 0.02
+                   and abs(dz - exp_dz) < 0.02)
+    else:
+        dims_ok = (abs(dx - exp_dx) < 0.02 and abs(dy - exp_dy) < tol_y
+                   and abs(dz - spec["total_height_mm"]) < tol_z)
 
     top = [v for v in vs if abs(v.z - max(zs)) < 0.01]
     studs = len(top) // 48 if spec["studs"] else 0

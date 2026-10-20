@@ -83,6 +83,166 @@ def add_profile_wedge(name, x_half, pts_yz, m):
     return o
 
 
+def add_prism_xz(name, pts_xz, y_half):
+    """Closed prism from an XZ polygon extruded along Y (for the roof ridge)."""
+    bm = bmesh.new()
+    l0 = [bm.verts.new((x, -y_half, z)) for (x, z) in pts_xz]
+    l1 = [bm.verts.new((x, y_half, z)) for (x, z) in pts_xz]
+    bm.faces.new(l0)
+    bm.faces.new(l1)
+    n = len(pts_xz)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((l0[i], l0[j], l1[j], l1[i]))
+    me = bpy.data.meshes.new(name)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    scene.collection.objects.link(o)
+    return o
+
+
+def _bevel(body, width=0.15, segments=2):
+    b = body.modifiers.new("Bevel", "BEVEL")
+    b.width = width
+    b.segments = segments
+    b.limit_method = "ANGLE"
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.modifier_apply(modifier=b.name)
+
+
+def _pocket(body, x, y, depth=2.4, zc=0.7):
+    """Blind stud pocket in a solid body (tiles, ridge, window frame)."""
+    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R - 0.10, depth=depth,
+                                        location=(x, y, zc))
+    apply_bool(body, bpy.context.active_object)
+
+
+def _studs(body, positions, h):
+    parts = [body]
+    for (xx, yy) in positions:
+        # sink 0.1 into the body: a coplanar bottom cap z-fights with the top face
+        bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R_EFF, depth=STUD_H + 0.2,
+                                            location=(xx, yy, h + STUD_H / 2 - 0.1))
+        parts.append(bpy.context.active_object)
+    bpy.ops.object.select_all(action="DESELECT")
+    for ob in parts:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
+
+
+def finish(body, name, m, h, centered=True):
+    # same local frame as make_unit: mesh centred on the origin, object at h/2.
+    # Prisms built from absolute vertices (ridge) still need the shift.
+    if not centered:
+        body.data.transform(Matrix.Translation((0, 0, -h / 2)))
+    body.location = (0, 0, h / 2)
+    body.name = name
+    body.data.materials.clear()
+    body.data.materials.append(m)
+    for p in body.data.polygons:
+        p.material_index = 0
+    for c in body.users_collection:
+        c.objects.unlink(body)
+    bricks_col.objects.link(body)
+    units.append(body)
+    return body
+
+
+def make_ridge(name, nx, ny, m):
+    """Double convex 45deg roof ridge: ridge line along Y at the brick top,
+    faces fall to a 1.7 mm skirt at both eaves. Solid body + blind pockets:
+    clutch tubes would break through the sloped walls."""
+    w, d = nx * P - GAP, ny * P - GAP
+    hx = w / 2
+    skirt = BRICK_H - hx          # 45deg face reaches the top after hx of run
+    pts = [(-hx, 0.0), (hx, 0.0), (hx, skirt), (0.0, BRICK_H), (-hx, skirt)]
+    body = add_prism_xz(name, pts, d / 2)
+    # no bevel: the angle-limited bevel would shave the ridge line below 9.6
+    for yy in [-(ny - 1) * P / 2 + i * P for i in range(ny)]:
+        for xx in [-(nx - 1) * P / 2 + i * P for i in range(nx)]:
+            _pocket(body, xx, yy)
+    return finish(body, name, m, BRICK_H, centered=False)
+
+
+def make_arch(name, nx, ny, m, opening=2):
+    """Brick arch: semicircular opening `opening` studs wide through the 7.8 mm
+    thickness, crown 1.6 mm below the brick top. Solid legs with blind pockets
+    (only the end studs sit over material)."""
+    w, d = nx * P - GAP, ny * P - GAP
+    r = opening * P / 2
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, BRICK_H / 2))
+    body = bpy.context.active_object
+    body.name = name
+    body.data.transform(Matrix.Diagonal((w, d, BRICK_H, 1.0)))
+    _bevel(body)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=r, depth=w + 4,
+                                        location=(0, 0, 0),
+                                        rotation=(0, math.radians(90), 0))
+    apply_bool(body, bpy.context.active_object)
+    xs = [-(nx - 1) * P / 2 + i * P for i in range(nx)]
+    ys = [-(ny - 1) * P / 2 + i * P for i in range(ny)]
+    # leg cavities follow the 1xN brick rule (wall 1.5, 4.45 press-fit cavity,
+    # ceiling 8.1) instead of blind pockets: the legs are 1x1 columns and stay
+    # clear of the arch tunnel, so the piece grips like brick_1x4
+    wall = WALL
+    mouth = -0.5
+    ch = BRICK_H - wall - mouth
+    zc = (BRICK_H - wall + mouth) / 2
+    for yy in (ys[0], ys[-1]):      # only the end studs sit over material
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, yy, zc))
+        c = bpy.context.active_object
+        c.data.transform(Matrix.Diagonal((4.45, 4.45, ch, 1.0)))
+        apply_bool(body, c)
+    _studs(body, [(xx, yy) for yy in ys for xx in xs], BRICK_H)
+    return finish(body, name, m, BRICK_H)
+
+
+def make_window_frame(name, m):
+    """1 x 2 x 2 window frame, 1.5 mm border (same wall as every other unit).
+    Opening 12.8 x 15.3 through the 7.8 mm thickness; sill 2.4 leaves 0.5 mm
+    over the 1.9 mm blind pockets. The pane rests on the back face and is
+    captured by the frame's border, so the frame needs no recess."""
+    w, d, h = P - GAP, 2 * P - GAP, 2 * BRICK_H
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, h / 2))
+    body = bpy.context.active_object
+    body.name = name
+    body.data.transform(Matrix.Diagonal((w, d, h, 1.0)))
+    _bevel(body)
+    sill, open_w = 2.4, d - 2 * WALL
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, (sill + h - WALL) / 2))
+    c = bpy.context.active_object
+    c.data.transform(Matrix.Diagonal((w + 4, open_w, (h - WALL) - sill, 1.0)))
+    apply_bool(body, c)
+    for yy in [-P / 2, P / 2]:
+        _pocket(body, 0.0, yy)
+    _studs(body, [(0.0, -P / 2), (0.0, P / 2)], h)
+    return finish(body, name, m, h)
+
+
+def make_pane(name, m):
+    """0.8 mm boss plugs the frame opening (0.1 clearance per side); a 1.2 mm
+    flange rests on the frame's back face. The 1.5 mm frame border captures it
+    from the front, i.e. it drops in from behind and cannot fall forward.
+    Print flange-down. An insert, not a stacking part."""
+    fw, fh, ft = 14.6, 17.1, 1.2      # flange
+    bw, bh, bt = 12.6, 15.1, 0.8      # boss -> 12.8 x 15.3 opening minus 0.1/side
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, fh / 2))
+    body = bpy.context.active_object
+    body.name = name
+    body.data.transform(Matrix.Diagonal((ft, fw, fh, 1.0)))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(-(ft + bt) / 2, 0, bh / 2 + (fh - bh) / 2))
+    c = bpy.context.active_object
+    c.data.transform(Matrix.Diagonal((bt, bw, bh, 1.0)))
+    bpy.ops.object.select_all(action="DESELECT")
+    body.select_set(True); c.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
+    return finish(body, name, m, fh)
+
+
 def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False, hollow=True,
               cavity_tighten=0.0, slope_wall=1.3, pockets=False, stud_positions=None):
     """cavity_tighten: shrink cavity cross-section (per-unit clutch tuning for pieces
@@ -219,16 +379,7 @@ def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False,
         else:
             stud_xy = [(xx, yy) for yy in [-(ny - 1) * P / 2 + i * P for i in range(ny)]
                        for xx in xs]
-        parts = [body]
-        for (xx, yy) in stud_xy:
-            bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R_EFF, depth=STUD_H,
-                                                location=(xx, yy, h + STUD_H / 2))
-            parts.append(bpy.context.active_object)
-        bpy.ops.object.select_all(action="DESELECT")
-        for ob in parts:
-            ob.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
+        _studs(body, stud_xy, h)
 
     # boolean/join leave a None slot at index 0 -> everything renders default gray; fix
     body.data.materials.clear()
@@ -287,6 +438,12 @@ make_unit("brick_2x2", 2, 2, COLORS["blue"])
 make_unit("brick_2x4", 2, 4, COLORS["yellow"])
 make_unit("brick_2x6", 2, 6, COLORS["green"])
 make_unit("slope_2x2_45", 2, 2, COLORS["orange"], slope=True)
+make_ridge("slope_2x2_double_45", 2, 2, COLORS["orange"])
+make_arch("arch_1x4", 1, 4, COLORS["white"])
+make_window_frame("window_frame_1x2x2", COLORS["white"])
+make_pane("window_pane_1x2", COLORS["azure"])
+make_unit("round_plate_2x2", 2, 2, COLORS["azure"], round_=True, h=PLATE_H, hollow=False,
+          pockets=True)   # solid disc + 4 blind pockets (tubes would breach the round wall)
 make_cheese("slope_1x1_30", 1, 1, COLORS["orange"])
 make_cheese("slope_1x2_30", 1, 2, COLORS["orange"])
 make_unit("round_brick_1x1", 1, 1, COLORS["azure"], round_=True, cavity_tighten=0.15)  # bore 4.65 nominal line-to-line
@@ -317,7 +474,7 @@ def layout_row(objs, y, gap=16.0):
         w = o.dimensions.x
         o.location.x = x + w / 2
         o.location.y = y          # actually place each row at its y!
-        o.location.z = 0.2        # lift off ground: avoids z-fighting with floor
+        o.location.z = 0.2 - min(v.co.z for v in o.data.vertices)   # sit on the ground
         x += w + gap
     total = x - gap
     for o in objs:
@@ -326,8 +483,10 @@ def layout_row(objs, y, gap=16.0):
 
 
 row1 = ["brick_1x1", "brick_1x2", "brick_1x4", "brick_2x2", "brick_2x4", "brick_2x6"]
-row2 = ["slope_1x1_30", "slope_1x2_30", "slope_2x2_45", "round_brick_1x1",
-        "round_brick_2x2", "round_plate_1x1", "jumper_1x2"]
+row2 = ["slope_1x1_30", "slope_1x2_30", "slope_2x2_45", "slope_2x2_double_45",
+        "arch_1x4", "window_frame_1x2x2", "window_pane_1x2",
+        "round_brick_1x1", "round_brick_2x2", "round_plate_1x1", "round_plate_2x2",
+        "jumper_1x2"]
 row3 = ["plate_1x1", "plate_1x2", "plate_1x4", "plate_2x2", "plate_2x4", "plate_4x4", "plate_2x6"]
 row4 = ["plate_4x8", "plate_8x8", "plate_6x12", "tile_1x1", "tile_1x2", "tile_2x2", "tile_2x4"]
 t1 = layout_row([bpy.data.objects[n] for n in row1], y=140.0)
