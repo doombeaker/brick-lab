@@ -1,0 +1,375 @@
+import bpy
+import bmesh
+import math
+import os
+from pathlib import Path
+from mathutils import Matrix
+
+ROOT = Path(__file__).resolve().parent
+BLEND_PATH = str(ROOT / "bricks.blend")
+OUT_DIR = str(ROOT / "renders")
+EXP_DIR = str(ROOT / "exports")
+os.makedirs(OUT_DIR, exist_ok=True)
+os.makedirs(EXP_DIR, exist_ok=True)
+
+# LEGO nominal dims (mm). Scene unit = 1 mm.
+P = 8.0        # stud pitch
+GAP = 0.2      # per-side mold tolerance (7.8mm per stud of width)
+WALL = 1.5     # underside wall thickness
+STUD_R, STUD_H = 2.4, 1.8
+CLUTCH = 0.3          # diametral print clearance: holes stay nominal 4.8, studs shrink
+STUD_R_EFF = STUD_R - CLUTCH / 2   # -> OD 4.5 for FDM; use 0.15-0.2 for resin
+BRICK_H, PLATE_H = 9.6, 3.2
+
+bpy.ops.wm.read_factory_settings(use_empty=True)
+scene = bpy.context.scene
+
+
+def mat(name, rgb, rough=0.35):
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (*rgb, 1.0)
+    b.inputs["Roughness"].default_value = rough
+    b.inputs["Metallic"].default_value = 0.0
+    return m
+
+
+COLORS = {
+    "red": mat("red", (0.788, 0.102, 0.035)),
+    "blue": mat("blue", (0.0, 0.333, 0.749)),
+    "yellow": mat("yellow", (0.949, 0.804, 0.216)),
+    "green": mat("green", (0.137, 0.471, 0.255)),
+    "orange": mat("orange", (0.996, 0.541, 0.094)),
+    "azure": mat("azure", (0.212, 0.682, 0.749)),
+    "white": mat("white", (0.957, 0.957, 0.957)),
+    "black": mat("black", (0.106, 0.165, 0.204)),
+    "purple": mat("purple", (0.35, 0.20, 0.50)),
+}
+
+bricks_col = bpy.data.collections.new("Bricks")
+scene.collection.children.link(bricks_col)
+units = []
+
+
+def apply_bool(target, cutter, op="DIFFERENCE"):
+    mod = target.modifiers.new("b", "BOOLEAN")
+    mod.operation = op
+    mod.solver = "EXACT"
+    mod.object = cutter
+    bpy.context.view_layer.objects.active = target
+    target.select_set(True)
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    bpy.data.objects.remove(cutter, do_unlink=True)
+
+
+def add_profile_wedge(name, x_half, pts_yz, m):
+    """Closed prism from a YZ polygon extruded along X (for the slope cavity)."""
+    bm = bmesh.new()
+    l0 = [bm.verts.new((-x_half, y, z)) for (y, z) in pts_yz]
+    l1 = [bm.verts.new((x_half, y, z)) for (y, z) in pts_yz]
+    bm.faces.new(l0)
+    bm.faces.new(l1)
+    n = len(pts_yz)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((l0[i], l0[j], l1[j], l1[i]))
+    me = bpy.data.meshes.new(name)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)   # manual winding can be inconsistent
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    scene.collection.objects.link(o)
+    return o
+
+
+def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False, hollow=True,
+              cavity_tighten=0.0, slope_wall=1.3, pockets=False):
+    """cavity_tighten: shrink cavity cross-section (per-unit clutch tuning for pieces
+    without clutch tubes, e.g. 1x1 whose only grip is the 4 cavity walls).
+    slope_wall: slant-face wall thickness; 1.3 leaves room for front-row studs.
+    pockets: press-fit stud pockets in a solid bottom (tiles)."""
+    w, d = nx * P - GAP, ny * P - GAP
+    if round_:
+        bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=w / 2, depth=h, location=(0, 0, h / 2))
+    else:
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, h / 2))
+    body = bpy.context.active_object
+    body.name = name
+    if not round_:
+        body.data.transform(Matrix.Diagonal((w, d, h, 1.0)))
+
+    # bevel FIRST (outer edges only) so cavity mouths / tube rims keep sharp
+    # edges for a clean 4.8 clutch entry
+    if not round_:
+        bev = body.modifiers.new("Bevel", "BEVEL")
+        bev.width = 0.15
+        bev.segments = 2
+        bev.limit_method = "ANGLE"
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.modifier_apply(modifier="Bevel")
+
+    if hollow:
+        # plate wall must leave cavity depth >= stud + 0.1 (else studs can't seat)
+        wall = min(WALL, h - STUD_H - 0.1) if studs else WALL
+        mouth = -0.5                            # cutter dips below bottom to breach mouth bevel
+        ch = h - wall - mouth                   # cutter depth
+        zc = (h - wall + mouth) / 2             # cutter center: spans mouth .. h-wall
+        roof = h - wall                         # cavity ceiling (also tube span)
+        if slope:
+            # real LEGO slope: cavity runs under the whole footprint up to the
+            # inner slope surface (45deg plane offset inward by wall*sqrt2)
+            y_back = (d - 2 * wall) / 2
+            x_half = (w - 2 * wall) / 2
+            K = d / 2 - slope_wall * math.sqrt(2)  # thinner slant wall -> front studs seat
+            y_flat = roof - K                   # plane meets cavity ceiling
+            y_z0 = min(mouth - K, y_flat)       # plane meets cutter bottom
+            pts = [(y_z0, mouth), (y_back, mouth), (y_back, roof), (y_flat, roof)]
+            wedge = add_profile_wedge("wedge_cut", x_half, pts, m)
+            apply_bool(body, wedge)
+            # stud relief: near the front the 45deg slant drops below stud height,
+            # so front-row studs can't seat -> punch clearance columns (standard
+            # trick for printable slopes; only tiny scallops at the bottom edge)
+            if studs:
+                for yy in [-(ny - 1) * P / 2 + i * P for i in range(ny)]:
+                    if yy - STUD_R + K < STUD_H + 0.1:
+                        for xx in [-(nx - 1) * P / 2 + i * P for i in range(nx)]:
+                            bpy.ops.mesh.primitive_cylinder_add(
+                                vertices=48, radius=STUD_R + 0.2, depth=2.6,
+                                location=(xx, yy, 0.8))
+                            apply_bool(body, bpy.context.active_object)
+                # clutch tubes under the flat-top (back) stud row: without them a
+                # slope has zero grip. Press-fit bore (ID 4.4 vs stud 4.5).
+                yy = (ny - 1) * P / 2
+                for xx in [-(nx - 1) * P / 2 + i * P for i in range(nx)]:
+                    bpy.ops.mesh.primitive_cylinder_add(
+                        vertices=48, radius=3.2, depth=roof, location=(xx, yy, roof / 2))
+                    t = bpy.context.active_object
+                    bpy.ops.mesh.primitive_cylinder_add(
+                        vertices=48, radius=STUD_R - 0.10, depth=roof + 2,
+                        location=(xx, yy, roof / 2))
+                    apply_bool(t, bpy.context.active_object)
+                    mod = body.modifiers.new("tube", "BOOLEAN")
+                    mod.operation = "UNION"
+                    mod.solver = "EXACT"
+                    mod.object = t
+                    bpy.context.view_layer.objects.active = body
+                    body.select_set(True)
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
+                    bpy.data.objects.remove(t, do_unlink=True)
+        elif round_:
+            bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=w / 2 - wall - cavity_tighten / 2,
+                                                depth=ch, location=(0, 0, zc))
+            apply_bool(body, bpy.context.active_object)
+        else:
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, zc))
+            c = bpy.context.active_object
+            c.data.transform(Matrix.Diagonal((w - 2 * wall - cavity_tighten,
+                                              d - 2 * wall - cavity_tighten, ch, 1.0)))
+            apply_bool(body, c)
+
+        # clutch tubes under every stud position (both dims >= 2), like real LEGO;
+        # flush with the bottom face (z 0..roof) so no pads stick out
+        if studs and not round_ and not slope and nx >= 2 and ny >= 2:
+            ys_list = [-(ny - 1) * P / 2 + i * P for i in range(ny)]
+            xs_list = [-(nx - 1) * P / 2 + i * P for i in range(nx)]
+            for yy in ys_list:
+                for xx in xs_list:
+                    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=3.2, depth=roof,
+                                                        location=(xx, yy, roof / 2))
+                    t = bpy.context.active_object
+                    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R, depth=roof + 2,
+                                                        location=(xx, yy, roof / 2))
+                    apply_bool(t, bpy.context.active_object)   # punch hole: tube ID 4.8
+                    mod = body.modifiers.new("tube", "BOOLEAN")
+                    mod.operation = "UNION"
+                    mod.solver = "EXACT"
+                    mod.object = t
+                    bpy.context.view_layer.objects.active = body
+                    body.select_set(True)
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
+                    bpy.data.objects.remove(t, do_unlink=True)
+
+    if pockets:
+        # tiles: solid body, stud pockets in a solid bottom so the tile
+        # can actually snap onto other bricks (real LEGO tiles clutch too).
+        # ID 4.60 = clearance 0.05/side: shallow blind pockets (1.9mm) grip
+        # less than full-height tubes, so keep a light press like slope_2x2_45
+        # (verified 'easy push' at the same 4.60 bore)
+        for yy in [-(ny - 1) * P / 2 + i * P for i in range(ny)]:
+            for xx in [-(nx - 1) * P / 2 + i * P for i in range(nx)]:
+                bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R - 0.10,
+                                                    depth=2.4, location=(xx, yy, 0.7))
+                apply_bool(body, bpy.context.active_object)
+
+    if slope:
+        # 45-degree slope: top flat (d - h) deep at back, slope down to front-bottom edge
+        bpy.ops.mesh.primitive_cube_add(size=30, location=(0, -20, h - 0.49))
+        c = bpy.context.active_object
+        c.rotation_euler = (math.radians(45), 0, 0)
+        apply_bool(body, c)
+
+    if studs:
+        rows_y = [(ny - 1) * P / 2] if slope else [-(ny - 1) * P / 2 + i * P for i in range(ny)]
+        xs = [-(nx - 1) * P / 2 + i * P for i in range(nx)]
+        parts = [body]
+        for yy in rows_y:
+            for xx in xs:
+                bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R_EFF, depth=STUD_H,
+                                                    location=(xx, yy, h + STUD_H / 2))
+                parts.append(bpy.context.active_object)
+        bpy.ops.object.select_all(action="DESELECT")
+        for ob in parts:
+            ob.select_set(True)
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.join()
+
+    # boolean/join leave a None slot at index 0 -> everything renders default gray; fix
+    body.data.materials.clear()
+    body.data.materials.append(m)
+    for p2 in body.data.polygons:
+        p2.material_index = 0
+    for c2 in body.users_collection:
+        c2.objects.unlink(body)
+    bricks_col.objects.link(body)
+    units.append(body)
+    return body
+
+
+# ---------------- the set (one of each) ----------------
+make_unit("brick_1x1", 1, 1, COLORS["red"], cavity_tighten=0.4)   # press-fit: cavity 4.40 < stud 4.5
+make_unit("brick_1x2", 1, 2, COLORS["purple"], cavity_tighten=0.35)  # single-row: cavity 4.45
+make_unit("brick_2x2", 2, 2, COLORS["blue"])
+make_unit("brick_2x4", 2, 4, COLORS["yellow"])
+make_unit("brick_2x6", 2, 6, COLORS["green"])
+make_unit("slope_2x2_45", 2, 2, COLORS["orange"], slope=True)
+make_unit("round_brick_1x1", 1, 1, COLORS["azure"], round_=True, cavity_tighten=0.15)  # bore 4.65 nominal line-to-line; FDM shrink leaves slight press. 4.40 AND 4.45 both 'very hard' -> shrink comp needs to exceed 0.05/step
+make_unit("plate_2x4", 2, 4, COLORS["white"], h=PLATE_H)
+make_unit("plate_1x2", 1, 2, COLORS["white"], h=PLATE_H, cavity_tighten=0.4)  # single-row: no tubes, standard 4.80
+make_unit("plate_2x2", 2, 2, COLORS["white"], h=PLATE_H)
+make_unit("plate_2x6", 2, 6, COLORS["white"], h=PLATE_H)
+make_unit("plate_4x8", 4, 8, COLORS["white"], h=PLATE_H)
+make_unit("plate_8x8", 8, 8, COLORS["white"], h=PLATE_H)
+make_unit("plate_6x12", 6, 12, COLORS["white"], h=PLATE_H)
+make_unit("tile_2x2", 2, 2, COLORS["black"], h=PLATE_H, studs=False, hollow=False, pockets=True)
+
+# ---------------- layout: two rows on the ground ----------------
+def layout_row(objs, y, gap=25.0):
+    x = 0.0
+    for o in objs:
+        w = o.dimensions.x
+        o.location.x = x + w / 2
+        o.location.y = y          # actually place each row at its y!
+        o.location.z = 0.2        # lift off ground: avoids z-fighting with floor
+        x += w + gap
+    total = x - gap
+    for o in objs:
+        o.location.x -= total / 2
+    return total
+
+
+row1 = ["brick_1x1", "brick_1x2", "brick_2x2", "brick_2x4", "brick_2x6"]
+row2 = ["slope_2x2_45", "round_brick_1x1", "plate_1x2", "plate_2x2", "plate_2x4", "plate_2x6"]
+row3 = ["tile_2x2", "plate_4x8", "plate_8x8", "plate_6x12"]
+t1 = layout_row([bpy.data.objects[n] for n in row1], y=75.0)
+t2 = layout_row([bpy.data.objects[n] for n in row2], y=0.0)
+t3 = layout_row([bpy.data.objects[n] for n in row3], y=-90.0)
+print(f"row widths: {t1:.1f} / {t2:.1f} / {t3:.1f} mm")
+
+print("--- unit sizes (mm) ---")
+for o in units:
+    dm = o.dimensions
+    print(f"{o.name:18s} {dm.x:6.2f} x {dm.y:6.2f} x {dm.z:5.2f}")
+
+# ---------------- ground / world / light ----------------
+bpy.ops.mesh.primitive_plane_add(size=4000, location=(0, 0, 0))
+g = bpy.context.active_object
+g.name = "ground"
+gm = bpy.data.materials.new("ground")
+gm.use_nodes = True
+gm.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.72, 0.73, 0.75, 1)
+gm.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.9
+g.data.materials.append(gm)
+
+w = bpy.data.worlds.new("W")
+scene.world = w
+w.use_nodes = True
+w.node_tree.nodes["Background"].inputs[0].default_value = (0.93, 0.93, 0.95, 1)
+w.node_tree.nodes["Background"].inputs[1].default_value = 0.75
+l = bpy.data.lights.new("sun", "SUN")
+l.energy = 3.5
+l.angle = math.radians(12)
+lo = bpy.data.objects.new("sun", l)
+lo.rotation_euler = (math.radians(52), 0, math.radians(28))
+scene.collection.objects.link(lo)
+l2 = bpy.data.lights.new("fill", "SUN")
+l2.energy = 1.2
+lo2 = bpy.data.objects.new("fill", l2)
+lo2.rotation_euler = (math.radians(55), 0, math.radians(-130))
+scene.collection.objects.link(lo2)
+
+# ---------------- cameras / render ----------------
+row_span = max(t1, t2)
+
+
+from mathutils import Vector
+
+
+def ortho_cam(name, direction, scale, target=(0, 0, 5)):
+    c = bpy.data.cameras.new(name)
+    c.type = "ORTHO"
+    c.ortho_scale = scale
+    c.clip_end = 10000
+    o = bpy.data.objects.new(name, c)
+    o.location = (direction[0] * 500, direction[1] * 500, direction[2] * 500 + target[2])
+    d = Vector(target) - Vector(o.location)
+    o.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+    scene.collection.objects.link(o)
+    return o
+
+
+iso = ortho_cam("cam_iso", (0.55, -0.95, 0.55), 200)
+front = ortho_cam("cam_front", (0.0, -1.0, 0.30), 235)
+
+scene.render.engine = "BLENDER_EEVEE"
+ee = scene.eevee
+if hasattr(ee, "taa_render_samples"):
+    ee.taa_render_samples = 64
+scene.render.resolution_x = 1400
+scene.render.resolution_y = 900
+scene.view_settings.view_transform = "Standard"
+scene.view_settings.exposure = -0.1
+
+bpy.ops.wm.save_as_mainfile(filepath=BLEND_PATH)
+
+scene.camera = iso
+scene.render.filepath = os.path.join(OUT_DIR, "overview_iso.png")
+bpy.ops.render.render(write_still=True)
+print("Rendered overview_iso")
+scene.camera = front
+scene.render.filepath = os.path.join(OUT_DIR, "overview_front.png")
+bpy.ops.render.render(write_still=True)
+print("Rendered overview_front")
+
+# ---------------- optional mesh exports (off by default: keep the repo to 3MFs) ----------------
+if os.environ.get("EXPORT_MESHES") == "1":
+    try:
+        bpy.ops.preferences.addon_enable(module="io_scene_gltf2")
+    except Exception as e:
+        print("gltf addon:", e)
+
+    for o in units:
+        bpy.ops.object.select_all(action="DESELECT")
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.wm.stl_export(filepath=os.path.join(EXP_DIR, o.name + ".stl"), export_selected_objects=True)
+    print("STLs exported:", len(units))
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in units:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = units[0]
+    bpy.ops.export_scene.gltf(filepath=os.path.join(EXP_DIR, "brick_set.glb"), export_format="GLB",
+                              use_selection=True, export_apply=True)
+    print("GLB exported")
+print("DONE")

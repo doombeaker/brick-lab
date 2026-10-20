@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "description": "LEGO-compatible 8 mm-pitch brick set. Sizes in mm. Clutch values are nominal socket diameters; printed stud OD is 4.5.",
+  "constants": {
+    "pitch_mm": 8.0,
+    "gap_mm": 0.2,
+    "stud_od_mm": 4.5,
+    "stud_height_mm": 1.8,
+    "brick_body_mm": 9.6,
+    "plate_body_mm": 3.2,
+    "note": "STUD_R_EFF = 2.25 => printed stud OD 4.5. Cavity/tube nominal 4.8 unless listed."
+  },
+  "units": {
+    "brick_1x1": {
+      "nx": 1,
+      "ny": 1,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 1,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.4
+      },
+      "note": "press-fit square cavity (single stud, no tubes)"
+    },
+    "brick_1x2": {
+      "nx": 1,
+      "ny": 2,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 2,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.45
+      },
+      "note": "single-row brick: no clutch tubes, slight press-fit"
+    },
+    "brick_2x2": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 4,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "clutch tube under every stud"
+    },
+    "brick_2x4": {
+      "nx": 2,
+      "ny": 4,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 8,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "clutch tube under every stud"
+    },
+    "brick_2x6": {
+      "nx": 2,
+      "ny": 6,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 12,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "clutch tube under every stud"
+    },
+    "slope_2x2_45": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 2,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.6
+      },
+      "note": "45deg slope; front-row stud relief columns; back-row clutch tubes are clearance fit for easy insertion"
+    },
+    "round_brick_1x1": {
+      "nx": 1,
+      "ny": 1,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 1,
+      "clutch": {
+        "kind": "bore",
+        "size_mm": 4.65
+      },
+      "note": "cylindrical bore, nominal line-to-line (actual slight press from FDM shrink after two 'too tight' rounds at 4.40/4.45)"
+    },
+    "plate_1x2": {
+      "nx": 1,
+      "ny": 2,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 2,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.8
+      },
+      "note": "single-row plate: no clutch tubes; standard 4.80 cavity (same clearance as plate_2x4)"
+    },
+    "plate_2x2": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 4,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "thin-wall plate (wall 1.3mm), clutch tubes"
+    },
+    "plate_2x4": {
+      "nx": 2,
+      "ny": 4,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 8,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "reference plate: validated fit on printer"
+    },
+    "plate_2x6": {
+      "nx": 2,
+      "ny": 6,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 12,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "thin-wall plate (wall 1.3mm), clutch tubes"
+    },
+    "plate_4x8": {
+      "nx": 4,
+      "ny": 8,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 32,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "large base plate"
+    },
+    "plate_8x8": {
+      "nx": 8,
+      "ny": 8,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 64,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "large base plate"
+    },
+    "plate_6x12": {
+      "nx": 6,
+      "ny": 12,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 72,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "largest base plate (95.8 x 47.8 mm)"
+    },
+    "tile_2x2": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 3.2,
+      "total_height_mm": 3.2,
+      "studs": 0,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "smooth top; 4 blind stud pockets 1.9mm deep (clearance 0.05/side, light press; shallow pockets grip less than tubes)"
+    }
+  },
+  "colors": {
+    "black": "#14181C",
+    "gray": "#8C8E92",
+    "yellow": "#F2CD37",
+    "red": "#C91A09",
+    "orange": "#FE8A18",
+    "green": "#237841",
+    "coffee": "#4B2E1E",
+    "white": "#F4F4F4",
+    "blue": "#0055BF",
+    "azure": "#36AEBF",
+    "purple": "#593A7A"
+  }
+}
