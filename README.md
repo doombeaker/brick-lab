@@ -8,8 +8,8 @@ plus example models and print-ready Bambu Studio projects.
 - **15 brick types** on a true 8 mm stud pitch (bricks, slopes, rounds, plates, tiles)
 - **Print-ready 3MF** — one Bambu Studio project per brick, with the user's printer,
   process and filament settings baked in
-- **Clutch tuning from real prints** — press-fit 1x1 / round, clearance-fit slopes,
-  snap pockets on tiles
+- **Clutch tuning from real prints** — press-fit 1x1 / 1x2, clearance-fit rounds,
+  slopes and tiles
 - **Example builds** with layer-by-layer instructions and per-colour print plates
 - **Agent skills** that document the Blender → Bambu 3MF pipeline and the brick spec
 
@@ -67,7 +67,7 @@ Generated files land next to their source: `bricks/exports/*.3mf` (committed),
 | `brick_2x4` | 15.8 × 31.8 | 4.80 clutch tubes |
 | `brick_2x6` | 15.8 × 47.8 | 4.80 clutch tubes |
 | `slope_2x2_45` | 15.8 × 15.75 | 4.60 tube bore (kid-friendly clearance) |
-| `round_brick_1x1` | 7.8 × 7.8 | 4.40 bore (press-fit) |
+| `round_brick_1x1` | 7.8 × 7.8 | 4.65 bore (nominal line-to-line) |
 | `plate_1x2` | 7.8 × 15.8 | 4.80 cavity (no tubes) |
 | `plate_2x2` | 15.8 × 15.8 | 4.80 clutch tubes |
 | `plate_2x4` | 15.8 × 31.8 | 4.80 clutch tubes |
@@ -75,7 +75,7 @@ Generated files land next to their source: `bricks/exports/*.3mf` (committed),
 | `plate_4x8` | 31.8 × 63.8 | 4.80 clutch tubes |
 | `plate_8x8` | 63.8 × 63.8 | 4.80 clutch tubes |
 | `plate_6x12` | 47.8 × 95.8 | 4.80 clutch tubes |
-| `tile_2x2` | 15.8 × 15.8 | 4 pockets, 4.46 × 1.9 deep |
+| `tile_2x2` | 15.8 × 15.8 | 4 pockets, 4.60 × 1.9 deep |
 
 Full machine-readable specs: [`bricks/bricks.json`](bricks/bricks.json).
 Nominal stud OD is **4.5 mm** (4.8 socket minus 0.3 print clearance); heights are
@@ -86,9 +86,10 @@ Nominal stud OD is **4.5 mm** (4.8 socket minus 0.3 print clearance); heights ar
 - 0.20 mm layer, PLA, textured PEI. All parts are single-piece, no supports.
 - One plate per colour (single-extruder friendly). Plates are separated by ≥ 6 mm
   and kept 12 mm from the bed edge.
-- Press-fit parts (`brick_1x1`, `brick_1x2`, `round_brick_1x1`, `tile_2x2`) need
-  a normal FDM printer; if your holes print undersized, raise the cavity by
-  ~0.05 mm (see `bricks.json` and the skill's tuning notes).
+- `brick_1x1` / `brick_1x2` are press-fit; `round_brick_1x1`, `slope_2x2_45` and
+  `tile_2x2` use nominal-zero / small-clearance fits that rely on FDM hole
+  shrink for grip. If your holes print oversized, tighten the cavity by ~0.05 mm
+  (see `bricks.json` and the skill's tuning notes).
 
 ### Using a different printer
 
