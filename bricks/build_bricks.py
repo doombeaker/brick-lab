@@ -3,7 +3,7 @@ import bmesh
 import math
 import os
 from pathlib import Path
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parent
 BLEND_PATH = str(ROOT / "bricks.blend")
@@ -328,13 +328,28 @@ def layout_row(objs, y, gap=16.0):
 row1 = ["brick_1x1", "brick_1x2", "brick_1x4", "brick_2x2", "brick_2x4", "brick_2x6"]
 row2 = ["slope_1x1_30", "slope_1x2_30", "slope_2x2_45", "round_brick_1x1",
         "round_brick_2x2", "round_plate_1x1", "jumper_1x2"]
-row3 = ["plate_1x1", "plate_1x2", "plate_2x2", "plate_2x4", "plate_4x4", "plate_2x6"]
+row3 = ["plate_1x1", "plate_1x2", "plate_1x4", "plate_2x2", "plate_2x4", "plate_4x4", "plate_2x6"]
 row4 = ["plate_4x8", "plate_8x8", "plate_6x12", "tile_1x1", "tile_1x2", "tile_2x2", "tile_2x4"]
 t1 = layout_row([bpy.data.objects[n] for n in row1], y=140.0)
 t2 = layout_row([bpy.data.objects[n] for n in row2], y=80.0)
 t3 = layout_row([bpy.data.objects[n] for n in row3], y=5.0)
 t4 = layout_row([bpy.data.objects[n] for n in row4], y=-115.0)
 print(f"row widths: {t1:.1f} / {t2:.1f} / {t3:.1f} / {t4:.1f} mm")
+placed = {n for row in (row1, row2, row3, row4) for n in row}
+assert placed == {o.name for o in units}, f"unplaced: {({o.name for o in units} - placed)}"
+assert len(placed) == len(units), "duplicate unit in layout rows"
+bpy.context.view_layer.update()   # locations just changed: refresh matrix_world
+
+def _bbox(o):
+    pts = [o.matrix_world @ Vector(c) for c in o.bound_box]
+    return (min(p.x for p in pts), max(p.x for p in pts),
+            min(p.y for p in pts), max(p.y for p in pts))
+for i, a in enumerate(units):
+    ax0, ax1, ay0, ay1 = _bbox(a)
+    for b in units[i + 1:]:
+        bx0, bx1, by0, by1 = _bbox(b)
+        if ax0 < bx1 - 0.01 and bx0 < ax1 - 0.01 and ay0 < by1 - 0.01 and by0 < ay1 - 0.01:
+            print(f"WARNING: {a.name} overlaps {b.name} in the layout")
 
 print("--- unit sizes (mm) ---")
 for o in units:
