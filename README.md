@@ -115,15 +115,65 @@ docs/images/      README renders
 
 ## Agent skills
 
-Two skills live in `.opencode/skills/` and are picked up automatically when this
-repository is opened as an opencode workspace:
+Two skills in `.opencode/skills/` teach an agent how this project works. They are
+plain `SKILL.md` folders (YAML front matter + markdown + optional references and
+scripts), so they work with opencode out of the box and can be reused by other
+agents that follow the same convention.
 
-- **`blender-bambu-3mf`** — how to turn Blender geometry into a Bambu Studio 3MF:
-  package structure, multi-plate global grid, object IDs, thumbnails, validation,
-  and the pitfalls we hit (empty plates, duplicate IDs, coplanar boolean slivers).
-- **`blender-bricks-kit`** — the brick catalogue and how to build a new model on
-  top of it: grid/layer model, the `brickkit` API, clutch tuning history, and the
-  scaffold used by `examples/`.
+| Skill | Use it when… |
+|---|---|
+| **`blender-bambu-3mf`** | exporting Blender geometry to a print-ready Bambu Studio 3MF (single piece or multi-plate), rendering plate thumbnails, or debugging "empty plate", duplicate IDs and coplanar-boolean issues |
+| **`blender-bricks-kit`** | looking up brick dimensions/clutch values, tuning a fit, or starting a new model on top of this brick set (grid/layer model, `brickkit` API, project scaffold) |
+
+Each skill contains `SKILL.md` (workflow and rules), `references/` (format
+details, pitfalls, brick tables) and — for the 3MF skill — a reusable
+`scripts/printpack.py`.
+
+### Installation
+
+**Option 1 — use this repository as your workspace (recommended)**
+
+```bash
+git clone git@github.com:doombeaker/brick-lab.git
+cd brick-lab
+opencode          # skills are discovered from .opencode/skills/
+```
+
+**Option 2 — add the skills to an existing opencode workspace**
+
+```bash
+# project-level (only that workspace)
+mkdir -p /path/to/workspace/.opencode/skills
+cp -R /path/to/brick-lab/.opencode/skills/blender-* /path/to/workspace/.opencode/skills/
+
+# or user-level (all workspaces)
+mkdir -p ~/.config/opencode/skills
+cp -R /path/to/brick-lab/.opencode/skills/blender-* ~/.config/opencode/skills/
+```
+
+Symlinks work too, but both skills reference paths inside this repository
+(`bricks/`, `examples/`), so keep the clone around if you link instead of copy.
+Skills are matched by their `description`, so restart the session if a newly
+added skill does not show up.
+
+**Option 3 — other agents**
+
+The folders follow the common `SKILL.md` convention used by Claude Code and
+similar tools: copy them into that tool's skill directory, e.g.
+`.claude/skills/` (project) or `~/.claude/skills/` (user). For agents without a
+skill loader, point the agent at `.opencode/skills/<name>/SKILL.md` directly.
+
+### Usage
+
+Ask in natural language; the agent loads the matching skill:
+
+- "把 examples/cottage 导出成多盘 3MF" → `blender-bambu-3mf`
+- "Bambu 打开后只有 1 号盘有零件，为什么？" → `blender-bambu-3mf`
+- "基于现有积木做一个双层小屋" → `blender-bricks-kit`
+- "2x6 板的尺寸是多少？/ tile 有点紧，帮我调一下" → `blender-bricks-kit`
+
+Prerequisites for following the skills end to end: Blender 4.2+ (tested on 5.2)
+and, for the optional CLI validation, Bambu Studio 2.x.
 
 ## License
 
