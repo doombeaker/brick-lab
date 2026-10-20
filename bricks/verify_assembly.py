@@ -80,6 +80,7 @@ tests = [
     ("tile_1x2   onto brick_2x4", place("tile_1x2", -4, -8, BH), base),
     ("jumper_1x2 onto brick_2x4", place("jumper_1x2", -4, -8, BH), base),
     ("cheese_1x1 onto brick_2x4", place("slope_1x1_30", -4, -12, BH), base),
+    ("round_2x2  onto brick_2x4", place("round_brick_2x2", 0, -4, BH), base),
 ]
 PRESS_FIT = {"brick_1x1  onto plate_2x4", "brick_1x1 onto brick_1x1"}
 

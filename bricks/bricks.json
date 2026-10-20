@@ -234,10 +234,10 @@
       "total_height_mm": 11.4,
       "studs": 4,
       "clutch": {
-        "kind": "tube_bore",
-        "size_mm": 4.8
+        "kind": "pocket",
+        "size_mm": 4.6
       },
-      "note": "round body, 4 clutch tubes"
+      "note": "solid round body, 4 blind pockets (tube bores breach the round wall)"
     },
     "round_plate_1x1": {
       "nx": 1,

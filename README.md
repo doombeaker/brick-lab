@@ -71,7 +71,7 @@ Generated files land next to their source: `bricks/exports/*.3mf` (committed),
 | `slope_1x2_30` | 7.8 × 15.8 | 4.80 cavity (no top studs) |
 | `slope_2x2_45` | 15.8 × 15.8 | 4.60 clutch tubes |
 | `round_brick_1x1` | 7.8 × 7.8 | 4.65 bore |
-| `round_brick_2x2` | 15.8 × 15.8 | 4.80 clutch tubes |
+| `round_brick_2x2` | 15.8 × 15.8 | 4 pockets, 4.60 × 1.9 deep |
 | `round_plate_1x1` | 7.8 × 7.8 | 4.80 bore |
 | `plate_1x1` | 7.8 × 7.8 | 4.80 cavity (no tubes) |
 | `plate_1x2` | 7.8 × 15.8 | 4.80 cavity (no tubes) |

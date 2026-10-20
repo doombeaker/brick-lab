@@ -290,7 +290,8 @@ make_unit("slope_2x2_45", 2, 2, COLORS["orange"], slope=True)
 make_cheese("slope_1x1_30", 1, 1, COLORS["orange"])
 make_cheese("slope_1x2_30", 1, 2, COLORS["orange"])
 make_unit("round_brick_1x1", 1, 1, COLORS["azure"], round_=True, cavity_tighten=0.15)  # bore 4.65 nominal line-to-line
-make_unit("round_brick_2x2", 2, 2, COLORS["azure"], round_=True)      # hollow + 4 clutch tubes
+make_unit("round_brick_2x2", 2, 2, COLORS["azure"], round_=True, hollow=False,
+          pockets=True)   # solid body + 4 blind pockets (tubes would breach the round wall)
 make_unit("round_plate_1x1", 1, 1, COLORS["azure"], round_=True, h=PLATE_H, cavity_tighten=0.4)
 make_unit("plate_1x1", 1, 1, COLORS["white"], h=PLATE_H, cavity_tighten=0.4)
 make_unit("plate_2x4", 2, 4, COLORS["white"], h=PLATE_H)
