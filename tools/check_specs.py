@@ -44,7 +44,8 @@ for name, spec in SPEC["units"].items():
     exp_dy = spec["ny"] * SPEC["constants"]["pitch_mm"] - SPEC["constants"]["gap_mm"]
     # slope loses 0.05 mm in Y because of its raked plane
     tol_y = 0.06 if name.startswith("slope") else 0.02
-    dims_ok = abs(dx - exp_dx) < 0.02 and abs(dy - exp_dy) < tol_y and abs(dz - spec["total_height_mm"]) < 0.02
+    tol_z = 0.06 if name.endswith("_30") else 0.02
+    dims_ok = abs(dx - exp_dx) < 0.02 and abs(dy - exp_dy) < tol_y and abs(dz - spec["total_height_mm"]) < tol_z
 
     top = [v for v in vs if abs(v.z - max(zs)) < 0.01]
     studs = len(top) // 48 if spec["studs"] else 0
@@ -56,7 +57,8 @@ for name, spec in SPEC["units"].items():
         half = max(abs(v.x) for v in vs if -3 < v.x < 3 and v.z < -0.5)
         measured = 2 * half
     elif kind == "bore":
-        measured = 2 * median([r for r in (math.hypot(v.x, v.y) for v in vs) if 1.9 < r < 2.5])
+        # cylindrical bores only have rim vertices: take the widest radius below the stud OD
+        measured = 2 * max([math.hypot(v.x, v.y) for v in vs if 1.9 < math.hypot(v.x, v.y) < 2.5])
     elif kind in ("tube_bore", "pocket"):
         cx = -(spec["nx"] - 1) * 4.0
         cy = (spec["ny"] - 1) * 4.0 if name.startswith("slope") else -(spec["ny"] - 1) * 4.0

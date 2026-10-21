@@ -1,11 +1,11 @@
 ---
 name: blender-bricks-kit
-description: brick-lab（原 blender-bricks）积木套件的规格与建模流程：15 种砖的尺寸、腔径/过盈、网格与分层放置、基于现有砖创建新模型（战舰、小屋这类项目）。当用户要查砖型尺寸、调整配合松紧、复用积木做新模型或核对规格一致性时使用。
+description: brick-lab（原 blender-bricks）积木套件的规格与建模流程：27 种砖的尺寸、腔径/过盈、网格与分层放置、基于现有砖创建新模型（战舰、小屋这类项目）。当用户要查砖型尺寸、调整配合松紧、复用积木做新模型或核对规格一致性时使用。
 ---
 
 # brick-lab 积木套件
 
-一套 8 mm 间距、FDM 可打印的 LEGO 兼容积木：15 种类型，全部由
+一套 8 mm 间距、FDM 可打印的 LEGO 兼容积木：27 种类型，全部由
 `bricks/build_bricks.py` 参数化生成，示例项目见 `examples/warship` 与
 `examples/cottage`。
 
@@ -38,13 +38,14 @@ blender -b --factory-startup -P bricks/export_bricks_3mf.py
 | 砖高 / 板高 | 9.6 / 3.2 mm | 一层砖 = 3 个 3.2 层 |
 | 砖壁厚 | 1.5 mm | 板自动减到 1.3，保证凸点能进入 |
 
-## 15 种砖（速查）
+## 27 种砖（速查）
 
-砖：`brick_1x1`、`brick_1x2`、`brick_2x2`、`brick_2x4`、`brick_2x6`
-斜面：`slope_2x2_45`（单坡，前两钉有让位柱，后两钉下有离合管）
-圆柱：`round_brick_1x1`
-板：`plate_1x2`、`plate_2x2`、`plate_2x4`、`plate_2x6`、`plate_4x8`、`plate_8x8`、`plate_6x12`
-光面：`tile_2x2`（底部 4 个盲腔）
+砖：`brick_1x1`、`brick_1x2`、`brick_1x4`、`brick_2x2`、`brick_2x4`、`brick_2x6`
+斜面：`slope_1x1_30`、`slope_1x2_30`（30° 奶酪/长斜面，无顶凸点）、`slope_2x2_45`
+圆柱：`round_brick_1x1`、`round_brick_2x2`（4 离合管）、`round_plate_1x1`
+板：`plate_1x1`、`plate_1x2`、`plate_1x4`、`plate_2x2`、`plate_2x4`、`plate_2x6`、`plate_4x4`、`plate_4x8`、`plate_8x8`、`plate_6x12`
+光面：`tile_1x1`、`tile_1x2`、`tile_2x2`、`tile_2x4`
+跳板：`jumper_1x2`（1x2 板，正中一个凸点）
 
 完整尺寸/配合表见 `references/brick-specs.md`。
 
@@ -53,11 +54,12 @@ blender -b --factory-startup -P bricks/export_bricks_3mf.py
 | 类型 | 参数 | 手感 |
 |---|---|---|
 | 1x1 方砖 | 腔 4.40 | 过盈 0.05/边，卡紧不掉 |
-| 1x2 砖 | 腔 4.45 | 过盈 0.025/边 |
+| 1x2 / 1x4 砖 | 腔 4.45 | 过盈 0.025/边 |
 | 圆 1x1 | 圆孔 4.65 | 名义零配合（FDM 圆孔收缩提供握力） |
 | 标准 2xN 砖、所有带管板 | 管孔 4.80 | 标准间隙 0.15/边 |
-| 斜面 | 管孔 4.60 | 间隙 0.05/边（小孩可手推） |
-| tile | 盲腔 4.60 × 1.9 深 | 间隙 0.05/边（浅腔比管类更轻） |
+| 斜面 2x2 45° | 管孔 4.60 | 间隙 0.05/边（小孩可手推） |
+| 细节板 1x1/1x4/4x4、跳板、奶酪斜面、圆板 | 腔/孔 4.80 | 标准间隙 0.15/边 |
+| tile 1x1/1x2/2x2/2x4、圆 2x2 砖 | 盲腔 4.60 × 1.9 深 | 间隙 0.05/边（浅腔比管类更轻） |
 
 调整历史与判断方法见 `references/clutch-tuning.md`。
 
@@ -99,13 +101,14 @@ k.place(unit, gx, gy, zl, color, rot=0)
 ## 设计约束
 
 - **纯 stud-up**：只能从上方扣；没有侧面凸点，做不了正面五官/侧向连接
-- 斜面只有后排 2 个凸点可用；tile 顶部无凸点
+- 斜面 2x2 只有后排 2 个凸点可用；30° 奶酪斜面与 tile 顶部无凸点
+- 跳板只有正中一个凸点（1x2 板）
 - 1 格宽的件放不下离合管（管 OD 6.4 > 内腔），只能靠收紧腔体
 - 大板（4x8 以上）建议做底座；单块最长为 `plate_6x12`（95.8 × 47.8 mm）
 - 每个项目 ≤ 50 块是舒适上限（打印盘数与拼装时间）
 
 ## 参考
 
-- `references/brick-specs.md` — 15 种砖完整参数表
+- `references/brick-specs.md` — 27 种砖完整参数表
 - `references/clutch-tuning.md` — 配合调整历史、FDM 收缩经验
 - `references/project-scaffold.md` — 脚手架文件、层级数学、校验流程

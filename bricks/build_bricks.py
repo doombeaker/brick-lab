@@ -3,7 +3,7 @@ import bmesh
 import math
 import os
 from pathlib import Path
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parent
 BLEND_PATH = str(ROOT / "bricks.blend")
@@ -84,11 +84,12 @@ def add_profile_wedge(name, x_half, pts_yz, m):
 
 
 def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False, hollow=True,
-              cavity_tighten=0.0, slope_wall=1.3, pockets=False):
+              cavity_tighten=0.0, slope_wall=1.3, pockets=False, stud_positions=None):
     """cavity_tighten: shrink cavity cross-section (per-unit clutch tuning for pieces
     without clutch tubes, e.g. 1x1 whose only grip is the 4 cavity walls).
     slope_wall: slant-face wall thickness; 1.3 leaves room for front-row studs.
-    pockets: press-fit stud pockets in a solid bottom (tiles)."""
+    pockets: press-fit stud pockets in a solid bottom (tiles).
+    stud_positions: explicit (x, y) stud centres (used by the 1x2 jumper plate)."""
     w, d = nx * P - GAP, ny * P - GAP
     if round_:
         bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=w / 2, depth=h, location=(0, 0, h / 2))
@@ -170,7 +171,7 @@ def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False,
 
         # clutch tubes under every stud position (both dims >= 2), like real LEGO;
         # flush with the bottom face (z 0..roof) so no pads stick out
-        if studs and not round_ and not slope and nx >= 2 and ny >= 2:
+        if studs and not slope and nx >= 2 and ny >= 2:
             ys_list = [-(ny - 1) * P / 2 + i * P for i in range(ny)]
             xs_list = [-(nx - 1) * P / 2 + i * P for i in range(nx)]
             for yy in ys_list:
@@ -210,14 +211,19 @@ def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False,
         apply_bool(body, c)
 
     if studs:
-        rows_y = [(ny - 1) * P / 2] if slope else [-(ny - 1) * P / 2 + i * P for i in range(ny)]
         xs = [-(nx - 1) * P / 2 + i * P for i in range(nx)]
+        if stud_positions is not None:
+            stud_xy = list(stud_positions)
+        elif slope:
+            stud_xy = [(xx, (ny - 1) * P / 2) for xx in xs]
+        else:
+            stud_xy = [(xx, yy) for yy in [-(ny - 1) * P / 2 + i * P for i in range(ny)]
+                       for xx in xs]
         parts = [body]
-        for yy in rows_y:
-            for xx in xs:
-                bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R_EFF, depth=STUD_H,
-                                                    location=(xx, yy, h + STUD_H / 2))
-                parts.append(bpy.context.active_object)
+        for (xx, yy) in stud_xy:
+            bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R_EFF, depth=STUD_H,
+                                                location=(xx, yy, h + STUD_H / 2))
+            parts.append(bpy.context.active_object)
         bpy.ops.object.select_all(action="DESELECT")
         for ob in parts:
             ob.select_set(True)
@@ -236,25 +242,76 @@ def make_unit(name, nx, ny, m, h=BRICK_H, studs=True, round_=False, slope=False,
     return body
 
 
+def make_cheese(name, nx, ny, m, h=6.4, lip=1.2):
+    """Cheese slope (30 deg, 1x1/1x2 x 2/3): plain wedge, no top studs,
+    anti-stud recesses 4.8 under each stud position."""
+    w, d = nx * P - GAP, ny * P - GAP
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, h / 2))
+    body = bpy.context.active_object
+    body.name = name
+    body.data.transform(Matrix.Diagonal((w, d, h, 1.0)))
+    bev = body.modifiers.new("Bevel", "BEVEL")
+    bev.width = 0.15
+    bev.segments = 2
+    bev.limit_method = "ANGLE"
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.modifier_apply(modifier="Bevel")
+
+    # cut everything above the rake plane (front lip -> back top)
+    pts = [(-d / 2, lip), (d / 2, h), (d / 2, h + 8), (-d / 2, h + 8)]
+    apply_bool(body, add_profile_wedge("cheese_cut", w / 2 + 3, pts, m))
+
+    # anti-stud recesses
+    for yy in [-(ny - 1) * P / 2 + i * P for i in range(ny)]:
+        for xx in [-(nx - 1) * P / 2 + i * P for i in range(nx)]:
+            bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=STUD_R, depth=2.3,
+                                                location=(xx, yy, 0.65))
+            apply_bool(body, bpy.context.active_object)
+
+    body.data.materials.clear()
+    body.data.materials.append(m)
+    for poly in body.data.polygons:
+        poly.material_index = 0
+    for c in body.users_collection:
+        c.objects.unlink(body)
+    bricks_col.objects.link(body)
+    units.append(body)
+    return body
+
+
 # ---------------- the set (one of each) ----------------
 make_unit("brick_1x1", 1, 1, COLORS["red"], cavity_tighten=0.4)   # press-fit: cavity 4.40 < stud 4.5
 make_unit("brick_1x2", 1, 2, COLORS["purple"], cavity_tighten=0.35)  # single-row: cavity 4.45
+make_unit("brick_1x4", 1, 4, COLORS["blue"], cavity_tighten=0.35)    # single-row: cavity 4.45
 make_unit("brick_2x2", 2, 2, COLORS["blue"])
 make_unit("brick_2x4", 2, 4, COLORS["yellow"])
 make_unit("brick_2x6", 2, 6, COLORS["green"])
 make_unit("slope_2x2_45", 2, 2, COLORS["orange"], slope=True)
-make_unit("round_brick_1x1", 1, 1, COLORS["azure"], round_=True, cavity_tighten=0.15)  # bore 4.65 nominal line-to-line; FDM shrink leaves slight press. 4.40 AND 4.45 both 'very hard' -> shrink comp needs to exceed 0.05/step
+make_cheese("slope_1x1_30", 1, 1, COLORS["orange"])
+make_cheese("slope_1x2_30", 1, 2, COLORS["orange"])
+make_unit("round_brick_1x1", 1, 1, COLORS["azure"], round_=True, cavity_tighten=0.15)  # bore 4.65 nominal line-to-line
+make_unit("round_brick_2x2", 2, 2, COLORS["azure"], round_=True, hollow=False,
+          pockets=True)   # solid body + 4 blind pockets (tubes would breach the round wall)
+make_unit("round_plate_1x1", 1, 1, COLORS["azure"], round_=True, h=PLATE_H, cavity_tighten=0.4)
+make_unit("plate_1x1", 1, 1, COLORS["white"], h=PLATE_H, cavity_tighten=0.4)
 make_unit("plate_2x4", 2, 4, COLORS["white"], h=PLATE_H)
+make_unit("plate_1x4", 1, 4, COLORS["white"], h=PLATE_H, cavity_tighten=0.4)
+make_unit("plate_4x4", 4, 4, COLORS["white"], h=PLATE_H)
 make_unit("plate_1x2", 1, 2, COLORS["white"], h=PLATE_H, cavity_tighten=0.4)  # single-row: no tubes, standard 4.80
 make_unit("plate_2x2", 2, 2, COLORS["white"], h=PLATE_H)
 make_unit("plate_2x6", 2, 6, COLORS["white"], h=PLATE_H)
 make_unit("plate_4x8", 4, 8, COLORS["white"], h=PLATE_H)
 make_unit("plate_8x8", 8, 8, COLORS["white"], h=PLATE_H)
 make_unit("plate_6x12", 6, 12, COLORS["white"], h=PLATE_H)
+make_unit("tile_1x1", 1, 1, COLORS["black"], h=PLATE_H, studs=False, hollow=False, pockets=True)
+make_unit("tile_1x2", 1, 2, COLORS["black"], h=PLATE_H, studs=False, hollow=False, pockets=True)
 make_unit("tile_2x2", 2, 2, COLORS["black"], h=PLATE_H, studs=False, hollow=False, pockets=True)
+make_unit("tile_2x4", 2, 4, COLORS["black"], h=PLATE_H, studs=False, hollow=False, pockets=True)
+make_unit("jumper_1x2", 1, 2, COLORS["yellow"], h=PLATE_H, cavity_tighten=0.4,
+          stud_positions=[(0.0, 0.0)])
 
 # ---------------- layout: two rows on the ground ----------------
-def layout_row(objs, y, gap=25.0):
+def layout_row(objs, y, gap=16.0):
     x = 0.0
     for o in objs:
         w = o.dimensions.x
@@ -268,13 +325,31 @@ def layout_row(objs, y, gap=25.0):
     return total
 
 
-row1 = ["brick_1x1", "brick_1x2", "brick_2x2", "brick_2x4", "brick_2x6"]
-row2 = ["slope_2x2_45", "round_brick_1x1", "plate_1x2", "plate_2x2", "plate_2x4", "plate_2x6"]
-row3 = ["tile_2x2", "plate_4x8", "plate_8x8", "plate_6x12"]
-t1 = layout_row([bpy.data.objects[n] for n in row1], y=75.0)
-t2 = layout_row([bpy.data.objects[n] for n in row2], y=0.0)
-t3 = layout_row([bpy.data.objects[n] for n in row3], y=-90.0)
-print(f"row widths: {t1:.1f} / {t2:.1f} / {t3:.1f} mm")
+row1 = ["brick_1x1", "brick_1x2", "brick_1x4", "brick_2x2", "brick_2x4", "brick_2x6"]
+row2 = ["slope_1x1_30", "slope_1x2_30", "slope_2x2_45", "round_brick_1x1",
+        "round_brick_2x2", "round_plate_1x1", "jumper_1x2"]
+row3 = ["plate_1x1", "plate_1x2", "plate_1x4", "plate_2x2", "plate_2x4", "plate_4x4", "plate_2x6"]
+row4 = ["plate_4x8", "plate_8x8", "plate_6x12", "tile_1x1", "tile_1x2", "tile_2x2", "tile_2x4"]
+t1 = layout_row([bpy.data.objects[n] for n in row1], y=140.0)
+t2 = layout_row([bpy.data.objects[n] for n in row2], y=80.0)
+t3 = layout_row([bpy.data.objects[n] for n in row3], y=5.0)
+t4 = layout_row([bpy.data.objects[n] for n in row4], y=-115.0)
+print(f"row widths: {t1:.1f} / {t2:.1f} / {t3:.1f} / {t4:.1f} mm")
+placed = {n for row in (row1, row2, row3, row4) for n in row}
+assert placed == {o.name for o in units}, f"unplaced: {({o.name for o in units} - placed)}"
+assert len(placed) == len(units), "duplicate unit in layout rows"
+bpy.context.view_layer.update()   # locations just changed: refresh matrix_world
+
+def _bbox(o):
+    pts = [o.matrix_world @ Vector(c) for c in o.bound_box]
+    return (min(p.x for p in pts), max(p.x for p in pts),
+            min(p.y for p in pts), max(p.y for p in pts))
+for i, a in enumerate(units):
+    ax0, ax1, ay0, ay1 = _bbox(a)
+    for b in units[i + 1:]:
+        bx0, bx1, by0, by1 = _bbox(b)
+        if ax0 < bx1 - 0.01 and bx0 < ax1 - 0.01 and ay0 < by1 - 0.01 and by0 < ay1 - 0.01:
+            print(f"WARNING: {a.name} overlaps {b.name} in the layout")
 
 print("--- unit sizes (mm) ---")
 for o in units:
@@ -287,7 +362,7 @@ g = bpy.context.active_object
 g.name = "ground"
 gm = bpy.data.materials.new("ground")
 gm.use_nodes = True
-gm.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.72, 0.73, 0.75, 1)
+gm.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.45, 0.47, 0.50, 1)
 gm.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.9
 g.data.materials.append(gm)
 
@@ -328,8 +403,8 @@ def ortho_cam(name, direction, scale, target=(0, 0, 5)):
     return o
 
 
-iso = ortho_cam("cam_iso", (0.55, -0.95, 0.55), 200)
-front = ortho_cam("cam_front", (0.0, -1.0, 0.30), 235)
+iso = ortho_cam("cam_iso", (0.01, -0.02, 1.0), 560)
+front = ortho_cam("cam_front", (0.0, -1.0, 0.30), 330)
 
 scene.render.engine = "BLENDER_EEVEE"
 ee = scene.eevee

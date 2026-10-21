@@ -190,6 +190,150 @@
         "size_mm": 4.6
       },
       "note": "smooth top; 4 blind stud pockets 1.9mm deep (clearance 0.05/side, light press; shallow pockets grip less than tubes)"
+    },
+    "brick_1x4": {
+      "nx": 1,
+      "ny": 4,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 4,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.45
+      },
+      "note": "single-row brick: no tubes, press-fit cavity"
+    },
+    "slope_1x1_30": {
+      "nx": 1,
+      "ny": 1,
+      "body_height_mm": 6.4,
+      "total_height_mm": 6.4,
+      "studs": 0,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.8
+      },
+      "note": "30deg cheese slope, no top studs, anti-stud recess"
+    },
+    "slope_1x2_30": {
+      "nx": 1,
+      "ny": 2,
+      "body_height_mm": 6.4,
+      "total_height_mm": 6.4,
+      "studs": 0,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.8
+      },
+      "note": "30deg 1x2 slope, no top studs, two anti-stud recesses"
+    },
+    "round_brick_2x2": {
+      "nx": 2,
+      "ny": 2,
+      "body_height_mm": 9.6,
+      "total_height_mm": 11.4,
+      "studs": 4,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "solid round body, 4 blind pockets (tube bores breach the round wall)"
+    },
+    "round_plate_1x1": {
+      "nx": 1,
+      "ny": 1,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 1,
+      "clutch": {
+        "kind": "bore",
+        "size_mm": 4.8
+      },
+      "note": "round plate, standard cavity"
+    },
+    "plate_1x1": {
+      "nx": 1,
+      "ny": 1,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 1,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.8
+      },
+      "note": "single anti-stud cavity, no tubes"
+    },
+    "plate_1x4": {
+      "nx": 1,
+      "ny": 4,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 4,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.8
+      },
+      "note": "single-row plate, no tubes"
+    },
+    "plate_4x4": {
+      "nx": 4,
+      "ny": 4,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 16,
+      "clutch": {
+        "kind": "tube_bore",
+        "size_mm": 4.8
+      },
+      "note": "clutch tube under every stud"
+    },
+    "tile_1x1": {
+      "nx": 1,
+      "ny": 1,
+      "body_height_mm": 3.2,
+      "total_height_mm": 3.2,
+      "studs": 0,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "smooth top, one blind pocket"
+    },
+    "tile_1x2": {
+      "nx": 1,
+      "ny": 2,
+      "body_height_mm": 3.2,
+      "total_height_mm": 3.2,
+      "studs": 0,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "smooth top, two blind pockets"
+    },
+    "tile_2x4": {
+      "nx": 2,
+      "ny": 4,
+      "body_height_mm": 3.2,
+      "total_height_mm": 3.2,
+      "studs": 0,
+      "clutch": {
+        "kind": "pocket",
+        "size_mm": 4.6
+      },
+      "note": "smooth top, eight blind pockets"
+    },
+    "jumper_1x2": {
+      "nx": 1,
+      "ny": 2,
+      "body_height_mm": 3.2,
+      "total_height_mm": 5.0,
+      "studs": 1,
+      "clutch": {
+        "kind": "cavity",
+        "size_mm": 4.8
+      },
+      "note": "jumper plate: one centred stud on a 1x2 footprint"
     }
   },
   "colors": {
